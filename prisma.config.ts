@@ -11,6 +11,6 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    url: env("DATABASE_URL", "postgresql://dummy:dummy@localhost:5432/dummy"),
   },
 });
