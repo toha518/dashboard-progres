@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String
+}
+
+model Region {
+  id       Int        @id @default(autoincrement())
+  code     String     @unique
+  name     String     @unique
+  type     String
+  order    Int
+  progress Progress[]
+}
+
+model Progress {
+  id         Int      @id @default(autoincrement())
+  regionId   Int
+  region     Region   @relation(fields: [regionId], references: [id])
+  date       DateTime
+  percentage Float
+  createdAt  DateTime @default(now())
+
+  @@unique([regionId, date])
+}
