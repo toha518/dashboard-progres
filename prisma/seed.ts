@@ -5,12 +5,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Seed Admin
-  const hashedPassword = await bcrypt.hash("admin123", 12);
+  const hashedPassword = await bcrypt.hash("se2026_1900", 12);
   await prisma.admin.upsert({
-    where: { username: "admin" },
+    where: { username: "admin_se2026" },
     update: {},
     create: {
-      username: "admin",
+      username: "admin_se2026",
       password: hashedPassword,
     },
   });

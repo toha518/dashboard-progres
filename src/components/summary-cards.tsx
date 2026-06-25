@@ -22,13 +22,6 @@ export function SummaryCards({ regions }: { regions: Region[] }) {
           region.progress.length > 0
             ? region.progress[region.progress.length - 1]
             : null;
-        const prev =
-          region.progress.length > 1
-            ? region.progress[region.progress.length - 2]
-            : null;
-
-        const change =
-          latest && prev ? (latest.percentage - prev.percentage).toFixed(2) : null;
 
         return (
           <Card
@@ -53,17 +46,6 @@ export function SummaryCards({ regions }: { regions: Region[] }) {
               <p className="text-2xl font-bold">
                 {latest ? `${latest.percentage.toFixed(2)}%` : "—"}
               </p>
-              {change && (
-                <p
-                  className={`text-xs mt-1 ${
-                    Number(change) >= 0
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {Number(change) >= 0 ? "↑" : "↓"} {Math.abs(Number(change))}%
-                </p>
-              )}
             </CardContent>
           </Card>
         );

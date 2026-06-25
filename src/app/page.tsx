@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { SummaryCards } from "@/components/summary-cards";
+import { DailyBarChart } from "@/components/daily-bar-chart";
 import { ProgressChart } from "@/components/progress-chart";
 import { ProgressTable } from "@/components/progress-table";
 import { DateRangePicker } from "@/components/date-range-picker";
@@ -23,6 +24,17 @@ export default function Home() {
   const [regions, setRegions] = useState<Region[]>([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [barDate, setBarDate] = useState("");
+
+  // Set default bar date to latest available date when regions load
+  useEffect(() => {
+    if (!barDate && regions.length > 0) {
+      const allDates = regions.flatMap((r) => r.progress.map((p) => p.date));
+      if (allDates.length > 0) {
+        setBarDate(allDates.sort().reverse()[0]);
+      }
+    }
+  }, [regions, barDate]);
 
   const allRegionIds = regions.map((r) => r.id);
   const [visibleRegionIds, setVisibleRegionIds] = useState<Set<number>>(
@@ -68,10 +80,10 @@ export default function Home() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#231f20] dark:text-white">
+          <h1 className="text-xl md:text-2xl font-bold text-[#231f20] dark:text-white whitespace-nowrap">
             Dashboard Monitoring SE2026 Bangka Belitung
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground text-xs mt-0.5">
             Progres Pendataan Lapangan
           </p>
         </div>
@@ -83,7 +95,7 @@ export default function Home() {
             onEndDateChange={setEndDate}
           />
           <Link href="/admin/login">
-            <Button variant="outline" size="sm">
+            <Button size="sm" className="bg-[#f79039] hover:bg-[#e67e22] text-white font-semibold shadow-sm">
               Login Admin
             </Button>
           </Link>
@@ -93,6 +105,29 @@ export default function Home() {
 
       {/* Summary Cards */}
       <SummaryCards regions={regions} />
+
+      {/* Daily Bar Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            Progres per Tanggal
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {regions.length > 0 && barDate ? (
+            <DailyBarChart
+              regions={regions}
+              isDark={theme === "dark"}
+              selectedDate={barDate}
+              onDateChange={setBarDate}
+            />
+          ) : (
+            <p className="text-muted-foreground text-sm text-center py-8">
+              Memuat data...
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Line Chart */}
       <Card>

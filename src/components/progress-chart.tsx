@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { useState, useMemo, useCallback, useEffect, Fragment } from "react";
+import { useState, useMemo, useCallback, Fragment } from "react";
 import { format, parseISO } from "date-fns";
 import {
   Select,
@@ -19,8 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Maximize2, Minimize2 } from "lucide-react";
 import type { Region } from "@/lib/types";
 
 const LIGHT_COLORS: Record<string, string> = {
@@ -54,7 +52,6 @@ interface Props {
 export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
   const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
   const [scaleMax, setScaleMax] = useState<number | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const SCALE_OPTIONS = Array.from({ length: 20 }, (_, i) => (i + 1) * 5);
 
@@ -185,32 +182,6 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
     [isDark]
   );
 
-  // Fullscreen toggle
-  const handleFullscreen = useCallback(async () => {
-    const el = document.getElementById("progress-chart-container");
-    if (!el) return;
-    try {
-      if (!document.fullscreenElement) {
-        await el.requestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        await document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    } catch {
-      setIsFullscreen(false);
-    }
-  }, []);
-
-  // Listen for fullscreen change events
-  useEffect(() => {
-    const handler = () => {
-      if (!document.fullscreenElement) setIsFullscreen(false);
-    };
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
-
   const isProvinsi = (name: string) => name === "Provinsi";
 
   return (
@@ -243,26 +214,6 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Right: fullscreen button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleFullscreen}
-              className="gap-1.5 text-xs h-7"
-            >
-              {isFullscreen ? (
-                <>
-                  <Minimize2 className="h-3.5 w-3.5" />
-                  Keluar
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="h-3.5 w-3.5" />
-                  Fullscreen
-                </>
-              )}
-            </Button>
           </div>
 
           <ResponsiveContainer width="100%" height={400}>

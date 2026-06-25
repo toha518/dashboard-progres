@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Dashboard Admin</h1>
-        <Button variant="outline" onClick={() => signOut({ callbackUrl: "/" })}>
+        <Button className="bg-[#e63946] hover:bg-[#c1121f] text-white font-semibold shadow-sm" onClick={() => signOut({ callbackUrl: "/" })}>
           Logout
         </Button>
       </div>
