@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
+import { formatDate } from "@/lib/date";
 import type { Region } from "@/lib/types";
 
 export function ProgressTable({ regions }: { regions: Region[] }) {
@@ -28,40 +28,52 @@ export function ProgressTable({ regions }: { regions: Region[] }) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="max-h-[600px] overflow-y-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="whitespace-nowrap">Tanggal</TableHead>
+            <TableHead className="whitespace-nowrap sticky left-0 bg-card z-10">
+              Tanggal
+            </TableHead>
             {kabupaten.map((r) => (
-              <TableHead key={r.id} className="whitespace-nowrap text-right">
-                {r.code}
+              <TableHead
+                key={r.id}
+                className="whitespace-nowrap text-right"
+              >
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {r.code}
+                </span>
                 <br />
-                <span className="text-[10px] font-normal">{r.name}</span>
+                {r.name}
               </TableHead>
             ))}
             <TableHead className="whitespace-nowrap text-right font-bold">
-              {provinsi?.code}
+              <span className="text-[10px] font-mono text-muted-foreground">
+                {provinsi?.code}
+              </span>
               <br />
-              <span className="text-[10px] font-normal">Provinsi</span>
+              Provinsi
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {allDates.map((date) => (
-            <TableRow key={date}>
-              <TableCell className="whitespace-nowrap font-medium">
-                {format(parseISO(date), "dd MMM yyyy")}
+          {allDates.map((date, idx) => (
+            <TableRow
+              key={date}
+              className={idx % 2 === 0 ? "bg-muted/30" : ""}
+            >
+              <TableCell className="whitespace-nowrap font-medium sticky left-0 bg-card z-10">
+                {formatDate(date, "dd MMM yyyy")}
               </TableCell>
               {kabupaten.map((r) => {
                 const p = r.progress.find((p) => p.date === date);
                 return (
-                  <TableCell key={r.id} className="text-right">
+                  <TableCell key={r.id} className="text-right tabular-nums">
                     {p ? `${p.percentage.toFixed(2)}%` : "—"}
                   </TableCell>
                 );
               })}
-              <TableCell className="text-right font-bold">
+              <TableCell className="text-right font-bold tabular-nums">
                 {provinsi
                   ? (() => {
                       const p = provinsi.progress.find(

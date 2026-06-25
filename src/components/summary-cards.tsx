@@ -2,17 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Region } from "@/lib/types";
-
-const COLORS: Record<string, string> = {
-  Provinsi: "#231f20",
-  Bangka: "#f79039",
-  Belitung: "#e63946",
-  "Bangka Barat": "#06d6a0",
-  "Bangka Tengah": "#3a86ff",
-  "Bangka Selatan": "#ff006e",
-  "Belitung Timur": "#8338ec",
-  Pangkalpinang: "#ffbe0b",
-};
+import { getRegionColor } from "@/lib/colors";
 
 export function SummaryCards({ regions }: { regions: Region[] }) {
   return (
@@ -23,28 +13,39 @@ export function SummaryCards({ regions }: { regions: Region[] }) {
             ? region.progress[region.progress.length - 1]
             : null;
 
+        const color = getRegionColor(region.name, false);
+        const isProvinsi = region.type === "provinsi";
+
         return (
           <Card
             key={region.id}
-            className={`${region.type === "provinsi" ? "ring-2 ring-[#231f20] dark:ring-white" : ""}`}
+            className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+              isProvinsi
+                ? "ring-2 ring-primary/40 shadow-sm"
+                : "shadow-sm"
+            }`}
           >
-            <CardHeader className="pb-2">
+            <div
+              className="absolute top-0 left-0 right-0 h-1"
+              style={{ backgroundColor: color }}
+            />
+            <CardHeader className="pb-1 pt-4">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <span
-                  className="w-3 h-3 rounded-full inline-block shrink-0"
-                  style={{ backgroundColor: COLORS[region.name] }}
+                  className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                  style={{ backgroundColor: color }}
                 />
                 <span className="truncate">
-                  <span className="text-[10px] text-muted-foreground mr-1 font-mono">
-                    {region.code}
-                  </span>
                   {region.name}
                 </span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">
+            <CardContent className="pb-4">
+              <p className={`text-2xl font-bold tabular-nums ${isProvinsi ? "text-primary" : ""}`}>
                 {latest ? `${latest.percentage.toFixed(2)}%` : "—"}
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {region.progress.length} hari data
               </p>
             </CardContent>
           </Card>

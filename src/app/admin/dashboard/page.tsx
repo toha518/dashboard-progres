@@ -1,14 +1,16 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,7 +22,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
+import { formatDate } from "@/lib/date";
+import { toast } from "sonner";
+import {
+  CalendarDays,
+  MapPin,
+  Pencil,
+  Save,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 
 const REGIONS = [
   { id: 0, name: "Bangka" },
@@ -43,10 +55,10 @@ export default function AdminDashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [regions, setRegions] = useState<RegionData[]>([]);
+  const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -55,18 +67,35 @@ export default function AdminDashboardPage() {
   }, [status, router]);
 
   useEffect(() => {
+    setLoading(true);
     fetch("/api/progress")
       .then((res) => res.json())
       .then((data: RegionData[]) => {
         setRegions(data);
-        // Map region IDs
         for (const r of data) {
           const idx = REGIONS.findIndex((rr) => rr.name === r.name);
           if (idx >= 0) REGIONS[idx].id = r.id;
         }
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
+
+  const allDates = useMemo(
+    () =>
+      Array.from(
+        new Set(regions.flatMap((r) => r.progress.map((p) => p.date)))
+      )
+        .sort()
+        .reverse(),
+    [regions]
+  );
+
+  const latestProvinsi = useMemo(() => {
+    const prov = regions.find((r) => r.type === "provinsi");
+    if (!prov || prov.progress.length === 0) return null;
+    return prov.progress[prov.progress.length - 1];
+  }, [regions]);
 
   const handleEdit = (selectedDate: string) => {
     const dateOnly = selectedDate.split("T")[0];
@@ -80,10 +109,16 @@ export default function AdminDashboardPage() {
     }
     setValues(newValues);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    toast.info(`Mengedit data ${formatDate(dateOnly, "dd MMM yyyy")}`);
   };
 
   const handleDelete = async (selectedDate: string) => {
-    if (!confirm(`Yakin hapus data tanggal ${format(parseISO(selectedDate), "dd MMM yyyy")}?`)) return;
+    if (
+      !confirm(
+        `Yakin hapus data tanggal ${formatDate(selectedDate, "dd MMM yyyy")}?`
+      )
+    )
+      return;
 
     const dateOnly = selectedDate.split("T")[0];
     try {
@@ -94,22 +129,21 @@ export default function AdminDashboardPage() {
       });
 
       if (res.ok) {
-        setMessage("Data berhasil dihapus!");
+        toast.success("Data berhasil dihapus");
         const fresh = await fetch("/api/progress").then((r) => r.json());
         setRegions(fresh);
       } else {
         const err = await res.json();
-        setMessage(`Gagal: ${err.error}`);
+        toast.error(`Gagal: ${err.error}`);
       }
     } catch {
-      setMessage("Gagal menghapus data");
+      toast.error("Gagal menghapus data");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setMessage("");
 
     const payload = REGIONS.map((r) => ({
       regionId: r.id,
@@ -124,47 +158,114 @@ export default function AdminDashboardPage() {
       });
 
       if (res.ok) {
-        setMessage("Data berhasil disimpan!");
+        toast.success("Data berhasil disimpan");
         setValues({});
-        // Refresh data
         const fresh = await fetch("/api/progress").then((r) => r.json());
         setRegions(fresh);
       } else {
         const err = await res.json();
-        setMessage(`Gagal: ${err.error}`);
+        toast.error(`Gagal: ${err.error}`);
       }
     } catch {
-      setMessage("Gagal menyimpan data");
+      toast.error("Gagal menyimpan data");
     } finally {
       setSaving(false);
     }
   };
 
-  if (status === "loading") {
-    return <div className="p-8">Loading...</div>;
+  if (status === "loading" || loading) {
+    return (
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
+        <Skeleton className="h-96" />
+        <Skeleton className="h-64" />
+      </div>
+    );
   }
 
   if (!session) return null;
 
-  // Collect all dates for history
-  const allDates = Array.from(
-    new Set(regions.flatMap((r) => r.progress.map((p) => p.date)))
-  ).sort().reverse();
-
   return (
-    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard Admin</h1>
-        <Button className="bg-[#e63946] hover:bg-[#c1121f] text-white font-semibold shadow-sm" onClick={() => signOut({ callbackUrl: "/" })}>
-          Logout
-        </Button>
+    <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+          <TrendingUp className="size-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard Admin</h1>
+          <p className="text-xs text-muted-foreground">
+            Kelola data progres harian SE2026
+          </p>
+        </div>
       </div>
 
-      {/* Input Form */}
-      <Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Hari Data
+            </CardTitle>
+            <CalendarDays className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{allDates.length}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              rekaman data tersimpan
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Tanggal Terbaru
+            </CardTitle>
+            <CalendarDays className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-lg font-bold">
+              {allDates.length > 0
+                ? formatDate(allDates[0], "dd MMM yyyy")
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              input terakhir
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Progres Provinsi
+            </CardTitle>
+            <MapPin className="size-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-primary">
+              {latestProvinsi
+                ? `${latestProvinsi.percentage.toFixed(1)}%`
+                : "—"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              capaian terkini
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Input Data Progres Harian</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Save className="size-4 text-primary" />
+            Input Data Progres Harian
+          </CardTitle>
+          <CardDescription>
+            Isi persentase progres untuk setiap kabupaten/kota
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,8 +283,10 @@ export default function AdminDashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {REGIONS.map((r) => (
-                <div key={r.name} className="space-y-1">
-                  <Label htmlFor={r.name}>{r.name}</Label>
+                <div key={r.name} className="space-y-1.5">
+                  <Label htmlFor={r.name} className="text-sm">
+                    {r.name}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id={r.name}
@@ -192,7 +295,6 @@ export default function AdminDashboardPage() {
                       placeholder="0"
                       value={values[r.name] ?? ""}
                       onChange={(e) => {
-                        // Only allow digits, comma, dot, and minus
                         const val = e.target.value.replace(/[^0-9,.\-]/g, "");
                         setValues((prev) => ({
                           ...prev,
@@ -201,49 +303,44 @@ export default function AdminDashboardPage() {
                       }}
                       required
                     />
-                    <span className="text-muted-foreground text-sm">%</span>
+                    <span className="text-muted-foreground text-sm w-4">%</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            {message && (
-              <p
-                className={`text-sm ${
-                  message.startsWith("Gagal")
-                    ? "text-red-500"
-                    : "text-green-600 dark:text-green-400"
-                }`}
-              >
-                {message}
-              </p>
-            )}
-
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" disabled={saving} className="gap-2">
+              <Save className="size-4" />
               {saving ? "Menyimpan..." : "Simpan Data"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* History */}
-      <Card>
+      <Card className="shadow-sm">
         <CardHeader>
-          <CardTitle>Riwayat Input</CardTitle>
+          <CardTitle className="text-lg">Riwayat Input</CardTitle>
+          <CardDescription>
+            {allDates.length} rekaman data progres harian
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {allDates.length === 0 ? (
-            <p className="text-muted-foreground text-sm text-center py-4">
+            <p className="text-muted-foreground text-sm text-center py-8">
               Belum ada data.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
+            <Table>
+              <TableHeader>
                   <TableRow>
-                    <TableHead className="whitespace-nowrap">Tanggal</TableHead>
+                    <TableHead className="whitespace-nowrap sticky left-0 bg-card z-10">
+                      Tanggal
+                    </TableHead>
                     {REGIONS.map((r) => (
-                      <TableHead key={r.name} className="whitespace-nowrap text-right">
+                      <TableHead
+                        key={r.name}
+                        className="whitespace-nowrap text-right"
+                      >
                         {r.name}
                       </TableHead>
                     ))}
@@ -256,19 +353,31 @@ export default function AdminDashboardPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {allDates.map((date) => (
+                  {allDates.map((date, idx) => (
                     <TableRow key={date}>
-                      <TableCell className="whitespace-nowrap font-medium">
-                        {format(parseISO(date), "dd MMM yyyy")}
+                      <TableCell className="whitespace-nowrap font-medium sticky left-0 bg-card z-10">
+                        {formatDate(date, "dd MMM yyyy")}
+                        {idx === 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 text-[10px] h-4"
+                          >
+                            Terbaru
+                          </Badge>
+                        )}
                       </TableCell>
                       {REGIONS.map((r) => {
-                        const region = regions.find((rr) => rr.name === r.name);
+                        const region = regions.find(
+                          (rr) => rr.name === r.name
+                        );
                         const prog = region?.progress.find(
                           (p) => p.date === date
                         );
                         return (
                           <TableCell key={r.name} className="text-right">
-                            {prog ? `${prog.percentage.toFixed(2).replace(".", ",")}%` : "—"}
+                            {prog
+                              ? `${prog.percentage.toFixed(2).replace(".", ",")}%`
+                              : "—"}
                           </TableCell>
                         );
                       })}
@@ -280,27 +389,29 @@ export default function AdminDashboardPage() {
                           const p = prov?.progress.find(
                             (p) => p.date === date
                           );
-                          return p ? `${p.percentage.toFixed(1).replace(".", ",")}%` : "—";
+                          return p
+                            ? `${p.percentage.toFixed(1).replace(".", ",")}%`
+                            : "—";
                         })()}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
                             onClick={() => handleEdit(date)}
                             title="Edit"
                           >
-                            Edit
+                            <Pencil className="size-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="icon-sm"
                             onClick={() => handleDelete(date)}
                             title="Hapus"
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
-                            Hapus
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -308,7 +419,6 @@ export default function AdminDashboardPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

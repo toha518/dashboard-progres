@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useState, useMemo, useCallback, Fragment } from "react";
-import { format, parseISO } from "date-fns";
+import { formatDate } from "@/lib/date";
 import {
   Select,
   SelectContent,
@@ -20,28 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Region } from "@/lib/types";
-
-const LIGHT_COLORS: Record<string, string> = {
-  Provinsi: "#231f20",
-  Bangka: "#f79039",
-  Belitung: "#e63946",
-  "Bangka Barat": "#06d6a0",
-  "Bangka Tengah": "#3a86ff",
-  "Bangka Selatan": "#ff006e",
-  "Belitung Timur": "#8338ec",
-  Pangkalpinang: "#ffbe0b",
-};
-
-const DARK_COLORS: Record<string, string> = {
-  Provinsi: "#ffffff",
-  Bangka: "#f79039",
-  Belitung: "#ff6b6b",
-  "Bangka Barat": "#06d6a0",
-  "Bangka Tengah": "#5dade2",
-  "Bangka Selatan": "#ff4d94",
-  "Belitung Timur": "#af7ac5",
-  Pangkalpinang: "#ffd166",
-};
+import { getRegionColor } from "@/lib/colors";
 
 interface Props {
   regions: Region[];
@@ -50,7 +29,6 @@ interface Props {
 }
 
 export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
-  const colors = isDark ? DARK_COLORS : LIGHT_COLORS;
   const [scaleMax, setScaleMax] = useState<number | null>(null);
 
   const SCALE_OPTIONS = Array.from({ length: 20 }, (_, i) => (i + 1) * 5);
@@ -78,7 +56,7 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
     () =>
       allDates.map((date) => {
         const entry: Record<string, string | number | undefined> = {
-          date: format(parseISO(date), "dd MMM"),
+          date: formatDate(date, "dd MMM"),
         };
         for (const region of visibleRegions) {
           const prog = region.progress.find((p) => p.date === date);
@@ -187,7 +165,7 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
   return (
     <div id="progress-chart-container" className="relative">
       <div className="w-full overflow-x-auto">
-        <div className="min-w-[600px]">
+        <div className="min-w-0 w-full">
           {/* Controls bar */}
           <div className="flex items-center justify-between mb-3">
             {/* Left: scale selector */}
@@ -230,12 +208,12 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
                   >
                     <stop
                       offset="0%"
-                      stopColor={colors[region.name] || "#666"}
+                      stopColor={getRegionColor(region.name, isDark)}
                       stopOpacity={0.2}
                     />
                     <stop
                       offset="100%"
-                      stopColor={colors[region.name] || "#666"}
+                      stopColor={getRegionColor(region.name, isDark)}
                       stopOpacity={0.02}
                     />
                   </linearGradient>
@@ -244,7 +222,7 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke={isDark ? "#2a3a5c" : "#e8dcc8"}
-                strokeOpacity={0.4}
+                strokeOpacity={0.7}
               />
               <XAxis
                 dataKey="date"
@@ -264,7 +242,7 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
               />
               <Tooltip content={<CustomTooltip />} />
               {visibleRegions.map((region) => {
-                const color = colors[region.name] || "#666";
+                const color = getRegionColor(region.name, isDark);
                 const prov = isProvinsi(region.name);
                 return (
                   <Fragment key={region.name}>
@@ -299,7 +277,7 @@ export function ProgressChart({ regions, isDark, visibleRegionIds }: Props) {
           {/* Custom legend sorted by order */}
           <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 pt-3 text-xs">
             {visibleRegions.map((region) => {
-              const color = colors[region.name] || "#666";
+              const color = getRegionColor(region.name, isDark);
               return (
                 <span key={region.name} className="flex items-center gap-1.5">
                   <span

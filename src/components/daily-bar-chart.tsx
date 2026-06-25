@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -12,30 +12,16 @@ import {
   Cell,
   LabelList,
 } from "recharts";
-import { format, parseISO } from "date-fns";
+import { formatDate } from "@/lib/date";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Region } from "@/lib/types";
-
-const BAR_COLORS: Record<string, string> = {
-  Provinsi: "#231f20",
-  Bangka: "#f79039",
-  Belitung: "#e63946",
-  "Bangka Barat": "#06d6a0",
-  "Bangka Tengah": "#3a86ff",
-  "Bangka Selatan": "#ff006e",
-  "Belitung Timur": "#8338ec",
-  Pangkalpinang: "#ffbe0b",
-};
-
-const DARK_BAR_COLORS: Record<string, string> = {
-  Provinsi: "#ffffff",
-  Bangka: "#f79039",
-  Belitung: "#ff6b6b",
-  "Bangka Barat": "#06d6a0",
-  "Bangka Tengah": "#5dade2",
-  "Bangka Selatan": "#ff4d94",
-  "Belitung Timur": "#af7ac5",
-  Pangkalpinang: "#ffd166",
-};
+import { getRegionColor } from "@/lib/colors";
 
 interface Props {
   regions: Region[];
@@ -50,9 +36,6 @@ export function DailyBarChart({
   selectedDate,
   onDateChange,
 }: Props) {
-  const colors = isDark ? DARK_BAR_COLORS : BAR_COLORS;
-
-  // Get all available dates sorted descending
   const availableDates = useMemo(() => {
     const dates = new Set<string>();
     for (const r of regions) {
@@ -63,9 +46,9 @@ export function DailyBarChart({
     return Array.from(dates).sort().reverse();
   }, [regions]);
 
-  // Build bar data for selected date
   const barData = useMemo(() => {
     if (!selectedDate) return [];
+    const formattedDate = formatDate(selectedDate, "dd MMM yyyy");
     return regions
       .filter((r) => r.type !== "provinsi")
       .map((r) => {
@@ -74,6 +57,7 @@ export function DailyBarChart({
           name: r.name,
           percentage: prog?.percentage ?? 0,
           code: r.code,
+          date: formattedDate,
         };
       })
       .concat(
@@ -84,46 +68,66 @@ export function DailyBarChart({
             name: "Provinsi",
             percentage: prog?.percentage ?? 0,
             code: prov?.code ?? "1900",
+            date: formattedDate,
           };
         })()
       );
   }, [regions, selectedDate]);
 
-  const formattedDate = selectedDate
-    ? format(parseISO(selectedDate), "dd MMM yyyy")
-    : "";
+  const CustomBarTooltip = useCallback(
+    ({ active, payload }: any) => {
+      if (!active || !payload || payload.length === 0) return null;
+      const data = payload[0].payload;
+      const color = data?.color ?? getRegionColor(data?.name ?? "", isDark);
+
+      return (
+        <div
+          className="rounded-xl shadow-xl border px-4 py-3 text-sm"
+          style={{
+            backgroundColor: isDark ? "#16213e" : "#ffffff",
+            borderColor: isDark ? "#2a3a5c" : "#e8dcc8",
+            color: isDark ? "#e0e0e0" : "#231f20",
+          }}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: color }}
+            />
+            <span className="text-xs text-muted-foreground font-mono">
+              {data?.code}
+            </span>
+          </div>
+          <p className="font-semibold mb-1">{data?.name}</p>
+          <p className="text-xs text-muted-foreground mb-1.5">{data?.date}</p>
+          <p className="text-lg font-bold tabular-nums">
+            {Number(data?.percentage).toFixed(2)}%
+          </p>
+        </div>
+      );
+    },
+    [isDark]
+  );
 
   return (
     <div className="w-full overflow-x-auto">
-      <div className="min-w-[500px]">
-        {/* Date selector */}
+      <div className="min-w-0 w-full">
         <div className="flex items-center gap-3 mb-4">
           <span className="text-xs text-muted-foreground">Tanggal:</span>
-          <select
-            value={selectedDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="text-xs border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 bg-white dark:bg-[#1a1a2e] text-foreground focus:outline-none focus:ring-2 focus:ring-[#f79039]"
-          >
-            {availableDates.map((date) => (
-              <option key={date} value={date}>
-                {format(parseISO(date), "dd MMM yyyy")}
-              </option>
-            ))}
-          </select>
-          {formattedDate && (
-            <span className="text-xs text-muted-foreground ml-2">
-              {barData.length > 0 &&
-                `Rata-rata: ${(
-                  barData
-                    .filter((d) => d.name !== "Provinsi")
-                    .reduce((sum, d) => sum + d.percentage, 0) /
-                  Math.max(
-                    barData.filter((d) => d.name !== "Provinsi").length,
-                    1
-                  )
-                ).toFixed(2)}%`}
-            </span>
-          )}
+          <Select value={selectedDate} onValueChange={(v) => v && onDateChange(v)}>
+            <SelectTrigger className="w-[160px] h-8 text-xs">
+              <SelectValue>
+                {selectedDate ? formatDate(selectedDate, "dd MMM yyyy") : "Pilih tanggal"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {availableDates.map((date) => (
+                <SelectItem key={date} value={date}>
+                  {formatDate(date, "dd MMM yyyy")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <ResponsiveContainer width="100%" height={320}>
@@ -134,7 +138,7 @@ export function DailyBarChart({
             <CartesianGrid
               strokeDasharray="3 3"
               stroke={isDark ? "#2a3a5c" : "#e8dcc8"}
-              strokeOpacity={0.4}
+              strokeOpacity={0.7}
               vertical={false}
             />
             <XAxis
@@ -153,17 +157,7 @@ export function DailyBarChart({
               axisLine={false}
               ticks={[0, 20, 40, 60, 80, 100]}
             />
-            <Tooltip
-              formatter={(value: any) => `${Number(value).toFixed(2)}%`}
-              contentStyle={{
-                backgroundColor: isDark ? "#16213e" : "#ffffff",
-                border: `1px solid ${isDark ? "#2a3a5c" : "#e8dcc8"}`,
-                borderRadius: "8px",
-                color: isDark ? "#e0e0e0" : "#231f20",
-                fontSize: "12px",
-              }}
-              labelFormatter={(label) => label}
-            />
+            <Tooltip content={<CustomBarTooltip />} />
             <Bar
               dataKey="percentage"
               radius={[4, 4, 0, 0]}
@@ -182,7 +176,7 @@ export function DailyBarChart({
               {barData.map((entry) => (
                 <Cell
                   key={entry.name}
-                  fill={colors[entry.name] || "#666"}
+                  fill={getRegionColor(entry.name, isDark)}
                 />
               ))}
             </Bar>
