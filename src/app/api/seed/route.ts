@@ -1,12 +1,10 @@
 // GET /api/seed — jalanin seed database (hapus setelah dipakai)
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@/generated/prisma/client";
+import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
   try {
-    const prisma = new PrismaClient();
-
     const hashedPassword = await bcrypt.hash("se2026_1900", 12);
     await prisma.admin.upsert({
       where: { username: "admin_se2026" },
@@ -36,7 +34,6 @@ export async function GET() {
       });
     }
 
-    await prisma.$disconnect();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Seed error:", error);
