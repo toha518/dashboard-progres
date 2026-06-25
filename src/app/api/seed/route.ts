@@ -1,9 +1,9 @@
-// POST /api/seed — jalanin seed database (hapus setelah dipakai)
+// GET /api/seed — jalanin seed database (hapus setelah dipakai)
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@/generated/prisma/client";
 import bcrypt from "bcryptjs";
 
-export async function POST() {
+export async function GET() {
   try {
     const prisma = new PrismaClient();
 
