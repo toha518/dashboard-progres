@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { SummaryCards } from "@/components/summary-cards";
 import { DailyBarChart } from "@/components/daily-bar-chart";
@@ -22,9 +22,9 @@ import type { Region } from "@/lib/types";
 export default function Home() {
   const { theme } = useTheme();
   const [regions, setRegions] = useState<Region[]>([]);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [barDate, setBarDate] = useState("");
+  const [lineStartDate, setLineStartDate] = useState("");
+  const [lineEndDate, setLineEndDate] = useState("");
 
   // Set default bar date to latest available date when regions load
   useEffect(() => {
@@ -53,15 +53,11 @@ export default function Home() {
   }, [regions]);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (startDate) params.set("startDate", startDate);
-    if (endDate) params.set("endDate", endDate);
-
-    fetch(`/api/progress?${params.toString()}`)
+    fetch("/api/progress")
       .then((res) => res.json() as Promise<Region[]>)
       .then(setRegions)
       .catch(console.error);
-  }, [startDate, endDate]);
+  }, []);
 
   const handleToggleRegion = useCallback((regionId: number) => {
     setVisibleRegionIds((prev) => {
@@ -74,6 +70,18 @@ export default function Home() {
       return next;
     });
   }, []);
+
+  const lineChartRegions = useMemo(() => {
+    if (!lineStartDate && !lineEndDate) return regions;
+    return regions.map((r) => ({
+      ...r,
+      progress: r.progress.filter((p) => {
+        if (lineStartDate && p.date < lineStartDate) return false;
+        if (lineEndDate && p.date > lineEndDate) return false;
+        return true;
+      }),
+    }));
+  }, [regions, lineStartDate, lineEndDate]);
 
   return (
     <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full space-y-6">
@@ -88,12 +96,6 @@ export default function Home() {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
-          />
           <Link href="/admin/login">
             <Button size="sm" className="bg-[#f79039] hover:bg-[#e67e22] text-white font-semibold shadow-sm">
               Login Admin
@@ -136,6 +138,12 @@ export default function Home() {
             Presentase Progres Harian
           </CardTitle>
           <div className="flex items-center gap-2">
+            <DateRangePicker
+              startDate={lineStartDate}
+              endDate={lineEndDate}
+              onStartDateChange={setLineStartDate}
+              onEndDateChange={setLineEndDate}
+            />
             <VisibilityControl
               regions={regions}
               visibleRegionIds={visibleRegionIds}
@@ -146,7 +154,7 @@ export default function Home() {
         <CardContent>
           {regions.length > 0 ? (
             <ProgressChart
-              regions={regions}
+              regions={lineChartRegions}
               isDark={theme === "dark"}
               visibleRegionIds={visibleRegionIds}
             />
