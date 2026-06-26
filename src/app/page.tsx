@@ -102,7 +102,7 @@ export default function Home() {
           </div>
           <div>
             <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground">
-              Dashboard Monitoring SE2026
+              Dashboard Monitoring SE2026 Bangka Belitung
             </h1>
             <p className="text-muted-foreground text-xs mt-0.5">
               Progres Pendataan Lapangan Bangka Belitung
