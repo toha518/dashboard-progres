@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type { Region } from "@/lib/types";
 import { getRegionColor } from "@/lib/colors";
 
@@ -36,6 +38,8 @@ export function DailyBarChart({
   selectedDate,
   onDateChange,
 }: Props) {
+  const [sortByPercentage, setSortByPercentage] = useState(false);
+
   const availableDates = useMemo(() => {
     const dates = new Set<string>();
     for (const r of regions) {
@@ -73,6 +77,11 @@ export function DailyBarChart({
         })()
       );
   }, [regions, selectedDate]);
+
+  const sortedBarData = useMemo(() => {
+    if (!sortByPercentage) return barData;
+    return [...barData].sort((a, b) => b.percentage - a.percentage);
+  }, [barData, sortByPercentage]);
 
   const CustomBarTooltip = useCallback(
     ({ active, payload }: any) => {
@@ -128,11 +137,17 @@ export function DailyBarChart({
               ))}
             </SelectContent>
           </Select>
+          <div className="ml-auto flex items-center gap-2">
+            <Label htmlFor="sort-switch" className="text-xs text-muted-foreground cursor-pointer">
+              Urutkan %
+            </Label>
+            <Switch id="sort-switch" checked={sortByPercentage} onCheckedChange={setSortByPercentage} size="sm" />
+          </div>
         </div>
 
         <ResponsiveContainer width="100%" height={320}>
           <BarChart
-            data={barData}
+            data={sortedBarData}
             margin={{ top: 25, right: 20, left: 0, bottom: 5 }}
           >
             <CartesianGrid
@@ -173,7 +188,7 @@ export function DailyBarChart({
                   fontWeight: 600,
                 }}
               />
-              {barData.map((entry) => (
+              {sortedBarData.map((entry) => (
                 <Cell
                   key={entry.name}
                   fill={getRegionColor(entry.name, isDark)}
