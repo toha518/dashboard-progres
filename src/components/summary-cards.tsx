@@ -3,8 +3,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Region } from "@/lib/types";
 import { getRegionColor } from "@/lib/colors";
+import { useTheme } from "@/components/theme-provider";
 
 export function SummaryCards({ regions }: { regions: Region[] }) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {regions.map((region) => {
@@ -13,15 +17,15 @@ export function SummaryCards({ regions }: { regions: Region[] }) {
             ? region.progress[region.progress.length - 1]
             : null;
 
-        const color = getRegionColor(region.name, false);
+        const color = getRegionColor(region.name, isDark);
         const isProvinsi = region.type === "provinsi";
 
         return (
           <Card
             key={region.id}
-            className={`relative overflow-hidden transition-shadow hover:shadow-md ${
+            className={`relative overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-xl ${
               isProvinsi
-                ? "ring-2 ring-primary/40 shadow-sm"
+                ? "ring-2 ring-black dark:ring-white shadow-sm"
                 : "shadow-sm"
             }`}
           >
