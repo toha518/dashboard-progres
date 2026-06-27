@@ -42,6 +42,7 @@ const REGIONS = [
   { id: 0, name: "Bangka Selatan" },
   { id: 0, name: "Belitung Timur" },
   { id: 0, name: "Pangkalpinang" },
+  { id: 0, name: "Provinsi" },
 ];
 
 interface RegionData {
@@ -264,7 +265,7 @@ export default function AdminDashboardPage() {
             Input Data Progres Harian
           </CardTitle>
           <CardDescription>
-            Isi persentase progres untuk setiap kabupaten/kota
+            Isi persentase progres untuk setiap wilayah
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -339,14 +340,11 @@ export default function AdminDashboardPage() {
                     {REGIONS.map((r) => (
                       <TableHead
                         key={r.name}
-                        className="whitespace-nowrap text-right"
+                        className={`whitespace-nowrap text-right ${r.name === "Provinsi" ? "font-bold" : ""}`}
                       >
                         {r.name}
                       </TableHead>
                     ))}
-                    <TableHead className="whitespace-nowrap text-right font-bold">
-                      Provinsi
-                    </TableHead>
                     <TableHead className="whitespace-nowrap text-center">
                       Aksi
                     </TableHead>
@@ -374,26 +372,16 @@ export default function AdminDashboardPage() {
                           (p) => p.date === date
                         );
                         return (
-                          <TableCell key={r.name} className="text-right">
+                          <TableCell
+                            key={r.name}
+                            className={`text-right ${r.name === "Provinsi" ? "font-bold" : ""}`}
+                          >
                             {prog
                               ? `${prog.percentage.toFixed(2).replace(".", ",")}%`
                               : "—"}
                           </TableCell>
                         );
                       })}
-                      <TableCell className="text-right font-bold">
-                        {(() => {
-                          const prov = regions.find(
-                            (r) => r.type === "provinsi"
-                          );
-                          const p = prov?.progress.find(
-                            (p) => p.date === date
-                          );
-                          return p
-                            ? `${p.percentage.toFixed(1).replace(".", ",")}%`
-                            : "—";
-                        })()}
-                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button

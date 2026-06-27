@@ -41,6 +41,7 @@ const VALID_REGION_NAMES = [
   "Bangka Selatan",
   "Belitung Timur",
   "Pangkalpinang",
+  "Provinsi",
 ] as const;
 
 interface ProgressItem {
@@ -68,8 +69,8 @@ function validateInput(body: unknown): { date: string; values: ProgressItem[] } 
     return "Missing or empty 'values' array";
   }
 
-  if (values.length !== 7) {
-    return "Must provide exactly 7 values (one for each kabupaten/kota)";
+  if (values.length !== VALID_REGION_NAMES.length) {
+    return `Must provide exactly ${VALID_REGION_NAMES.length} values (one for each region)`;
   }
 
   for (const item of values) {
@@ -119,18 +120,17 @@ export async function POST(request: NextRequest) {
   const dateObj = new Date(date);
 
   try {
-    // Validate that all region IDs exist and are non-provinsi
-    const kabupatenIds = values.map((v) => v.regionId);
-    const kabupatenRegions = await prisma.region.findMany({
-      where: { id: { in: kabupatenIds }, type: { not: "provinsi" } },
+    const regionIds = values.map((v) => v.regionId);
+    const existingRegions = await prisma.region.findMany({
+      where: { id: { in: regionIds } },
     });
 
-    const foundNames = new Set(kabupatenRegions.map((r) => r.name));
+    const foundNames = new Set(existingRegions.map((r) => r.name));
     const allValid = VALID_REGION_NAMES.every((name) => foundNames.has(name));
 
-    if (!allValid || kabupatenRegions.length !== 7) {
+    if (!allValid || existingRegions.length !== VALID_REGION_NAMES.length) {
       return NextResponse.json(
-        { error: "Each regionId must correspond to one of the 7 kabupaten/kota" },
+        { error: `Each regionId must correspond to one of the ${VALID_REGION_NAMES.length} valid regions` },
         { status: 400 }
       );
     }
@@ -146,32 +146,6 @@ export async function POST(request: NextRequest) {
           regionId: item.regionId,
           date: dateObj,
           percentage: item.percentage,
-        },
-      });
-    }
-
-    // Hitung rata-rata provinsi
-    const totalPercentage = values.reduce(
-      (sum: number, v: { percentage: number }) => sum + v.percentage,
-      0
-    );
-    const avgPercentage = totalPercentage / values.length;
-
-    // Dapatkan region provinsi
-    const provinsi = await prisma.region.findUnique({
-      where: { name: "Provinsi" },
-    });
-
-    if (provinsi) {
-      await prisma.progress.upsert({
-        where: {
-          regionId_date: { regionId: provinsi.id, date: dateObj },
-        },
-        update: { percentage: avgPercentage },
-        create: {
-          regionId: provinsi.id,
-          date: dateObj,
-          percentage: avgPercentage,
         },
       });
     }
